@@ -40,6 +40,26 @@ function render(element, container) {
   container.appendChild(dom);
 }
 
+// work loop logic ensuring that rendering tasks don't block the main thread for too long
+let nextUnitOfWork = null
+​
+function workLoop(deadline) {
+  let shouldYield = false
+  while (nextUnitOfWork && !shouldYield) {
+    nextUnitOfWork = performUnitOfWork(
+      nextUnitOfWork
+    )
+    shouldYield = deadline.timeRemaining() < 1
+  }
+  requestIdleCallback(workLoop)
+}
+​
+requestIdleCallback(workLoop)
+​
+function performUnitOfWork(nextUnitOfWork) {
+  // TODO
+}
+
 // the library
 export const NanoReact = {
   createElement,
