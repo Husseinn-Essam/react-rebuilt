@@ -21,23 +21,29 @@ function createTextElement(text) {
   };
 }
 
-function render(element, container) {
+function createDom(fiber) {
   const dom =
-    element.type == "TEXT_ELEMENT"
+    fiber.type == "TEXT_ELEMENT"
       ? document.createTextNode("")
-      : document.createElement(element.type);
-  // assign props
-  const isProperty = (key) => key !== "children";
-  Object.keys(element.props)
+      : document.createElement(fiber.type)
+​
+  const isProperty = key => key !== "children"
+  Object.keys(fiber.props)
     .filter(isProperty)
-    .forEach((name) => {
-      dom[name] = element.props[name];
-    });
-  // render children
-  element.props.children.forEach((child) => {
-    render(child, dom);
-  });
-  container.appendChild(dom);
+    .forEach(name => {
+      dom[name] = fiber.props[name]
+    })
+​
+  return dom
+}
+
+function render(element, container) {
+  nextUnitOfWork = {
+    dom: container,
+    props: {
+      children: [element],
+    },
+  }
 }
 
 // work loop logic ensuring that rendering tasks don't block the main thread for too long
@@ -56,8 +62,50 @@ function workLoop(deadline) {
 ​
 requestIdleCallback(workLoop)
 ​
-function performUnitOfWork(nextUnitOfWork) {
-  // TODO
+function performUnitOfWork(fiber) {
+  // adding a dom node
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber)
+  }
+​
+  if (fiber.parent) {
+    fiber.parent.dom.appendChild(fiber.dom)
+  }
+  // creating new fibers loop
+  const elements = fiber.props.children
+  let index = 0
+  let prevSibling = null
+​
+  while (index < elements.length) {
+    const element = elements[index]
+​
+    const newFiber = {
+      type: element.type,
+      props: element.props,
+      parent: fiber,
+      dom: null,
+    }
+    if (index === 0) {
+      fiber.child = newFiber
+    } else {
+      prevSibling.sibling = newFiber
+    }
+​
+    prevSibling = newFiber
+    index++
+
+    // check next unit of work  child , sibling  , uncle
+  if (fiber.child) {
+    return fiber.child
+  }
+  let nextFiber = fiber
+  while (nextFiber) {
+    if (nextFiber.sibling) {
+      return nextFiber.sibling
+    }
+    nextFiber = nextFiber.parent
+  }
+  }
 }
 
 // the library
